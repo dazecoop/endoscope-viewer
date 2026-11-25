@@ -24,10 +24,28 @@ Tip: **Share → Add to Home Screen** to launch it fullscreen like an app.
 
 - **Rotate / Mirror** — endoscope feeds are usually sideways or flipped.
 - **Adjust** — brightness, contrast and saturation, useful in dark cavities.
-- **Snapshot** — opens the iOS share sheet; choose *Save to Photos*.
-- **Full** — fullscreen; tap the image to hide/show the controls.
+- **Snapshot** — captures instantly into the in-app gallery with a screen
+  flash and a beep. No dialog, so it works hands-free from an awkward spot.
+- **Gallery** — review your captures, then **Save all to Photos** in one step,
+  or open a shot to save or delete it individually.
 
 The screen is kept awake while viewing.
+
+### Saving to Photos
+
+iOS does not allow a web app to write to the Photos library silently — the
+share sheet (or long-pressing an image) is the only route Apple permits. So
+captures collect in the app's own gallery as you work, and you push them to
+Photos in a single batch afterwards, when you can comfortably reach the iPad.
+The gallery is stored locally (IndexedDB) and survives reloads.
+
+### Hardware shutter
+
+The button on many endoscope cables only triggers the camera's internal UVC
+capture, which browsers can't see — so it won't work here. A cheap **Bluetooth
+camera-shutter remote or footswitch** set to Android/keyboard mode pairs as a
+keyboard, and any key it sends fires the shutter. (Any paired keyboard key does,
+while the app is open.)
 
 ## Notes
 

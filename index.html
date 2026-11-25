@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0b0f0e">
 <title>Endoscope Viewer</title>
 <style>
-  /* Palette: near-black stage, warm teal accent (instrument feel), amber snapshot */
+  /* Palette: near-black stage, warm teal accent (instrument feel), amber capture */
   :root{
     --bg:#0b0f0e; --panel:#151b1a; --panel-2:#1f2624; --line:#2a3331;
     --fg:#eef3f1; --muted:#8fa09b; --accent:#2dd4bf; --accent-press:#14b8a6;
@@ -62,25 +62,56 @@
   #bar{flex:0 0 auto;display:flex;gap:8px;z-index:5;
     padding:10px calc(env(safe-area-inset-right,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 12px) calc(env(safe-area-inset-left,0px) + 12px);
     background:linear-gradient(to top,rgba(0,0,0,.55),transparent);}
-  .btn{flex:1;appearance:none;border:0;border-radius:14px;padding:13px 6px;background:var(--btn);color:var(--fg);
+  .btn{position:relative;flex:1;appearance:none;border:0;border-radius:14px;padding:13px 6px;background:var(--btn);color:var(--fg);
     font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;}
   .btn:active{background:var(--btn-press);}
   .btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .btn.snap svg{stroke:var(--amber);}
+  .btn.snap{background:var(--amber);color:#1a1200;}
+  .btn.snap svg{stroke:#1a1200;}
+  .btn.snap:active{background:#e0982e;}
   .btn.on{background:var(--accent);color:#06211d;}
+  .badge{position:absolute;top:5px;right:8px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--amber);
+    color:#1a1200;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;}
+  .badge.show{display:flex;}
 
-  /* snapshot overlay */
-  #snapOv{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-    padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);}
-  #snapOv.open{display:flex;}
-  #snapImg{max-width:100%;max-height:68%;border-radius:12px;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto;}
-  #snapOv p{color:var(--muted);text-align:center;margin:0;max-width:340px;font-size:14px;}
-  #snapRow{display:flex;gap:10px;}
-  #snapOv button{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:12px;padding:12px 24px;font-weight:600;}
-  #snapShare{background:var(--accent);color:#06211d;border-color:transparent;}
+  /* capture flash + feedback */
+  #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:40;transition:opacity .35s ease;}
+  #flash.go{opacity:.8;transition:none;}
+
+  /* gallery */
+  #gallery{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;}
+  #gallery.open{display:flex;}
+  #galTop{display:flex;align-items:center;gap:10px;flex:0 0 auto;
+    padding:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-right,0px)+16px) 12px calc(env(safe-area-inset-left,0px)+16px);
+    border-bottom:1px solid var(--line);}
+  #galTop h2{font-size:16px;margin:0;flex:1;font-weight:700;}
+  #galGrid{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;align-content:start;
+    padding:12px calc(env(safe-area-inset-right,0px)+12px) 12px calc(env(safe-area-inset-left,0px)+12px);}
+  .thumb{padding:0;border:0;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:4/3;}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .galempty{grid-column:1/-1;color:var(--muted);text-align:center;padding:48px 16px;line-height:1.5;}
+  #galActions{display:flex;gap:10px;flex:0 0 auto;
+    padding:12px calc(env(safe-area-inset-right,0px)+16px) calc(env(safe-area-inset-bottom,0px)+12px) calc(env(safe-area-inset-left,0px)+16px);
+    border-top:1px solid var(--line);}
+  #galActions button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:12px;padding:13px;font-weight:600;}
+  #saveAll{background:var(--accent);color:#06211d;border-color:transparent;}
+  #clearAll{color:var(--danger);flex:0 0 auto;}
+
+  /* single-image viewer */
+  #viewer{position:fixed;inset:0;z-index:25;background:rgba(0,0,0,.96);display:none;flex-direction:column;}
+  #viewer.open{display:flex;}
+  #viewerImg{flex:1 1 auto;min-height:0;width:100%;object-fit:contain;
+    -webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto;
+    padding:calc(env(safe-area-inset-top,0px)+8px) 8px 8px;}
+  #viewerActions{display:flex;gap:10px;flex:0 0 auto;
+    padding:12px calc(env(safe-area-inset-right,0px)+16px) calc(env(safe-area-inset-bottom,0px)+12px) calc(env(safe-area-inset-left,0px)+16px);}
+  #viewerActions button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:12px;padding:13px;font-weight:600;}
+  #vSave{background:var(--accent);color:#06211d;border-color:transparent;}
+  #vDelete{color:var(--danger);flex:0 0 auto;}
 
   .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);
-    background:rgba(0,0,0,.75);color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:30;opacity:0;transition:opacity .25s;pointer-events:none;}
+    background:rgba(0,0,0,.78);color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:45;opacity:0;transition:opacity .25s;pointer-events:none;}
   .toast.show{opacity:1;}
 </style>
 </head>
@@ -118,17 +149,37 @@
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Adjust</button>
     <button class="btn snap" id="snapBtn">
       <svg viewBox="0 0 24 24"><path d="M5 7h3l1.5-2h5L16 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg>Snapshot</button>
+    <button class="btn" id="galBtn">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 5"/><circle cx="8.5" cy="9.5" r="1.3"/></svg>Gallery
+      <span class="badge" id="galBadge">0</span></button>
   </div>
 </div>
 
-<div id="snapOv">
-  <img id="snapImg" alt="snapshot">
-  <p>Press and hold the image to save to Photos, or tap Share.</p>
-  <div id="snapRow">
-    <button id="snapShare">Share</button>
-    <button id="snapClose">Done</button>
+<div id="flash"></div>
+
+<!-- gallery -->
+<div id="gallery">
+  <div id="galTop">
+    <h2>Captures</h2>
+    <button class="linkbtn" id="galClose">Done</button>
+  </div>
+  <div id="galGrid"></div>
+  <div id="galActions">
+    <button id="saveAll">Save all to Photos</button>
+    <button id="clearAll">Clear</button>
   </div>
 </div>
+
+<!-- single image viewer -->
+<div id="viewer">
+  <img id="viewerImg" alt="capture">
+  <div id="viewerActions">
+    <button id="vBack" class="linkbtn" style="flex:0 0 auto">Back</button>
+    <button id="vSave">Save to Photos</button>
+    <button id="vDelete">Delete</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -147,17 +198,36 @@
   var state = { deviceId:null, rot:0, mir:false, bri:100, con:100, sat:100 };
   try { Object.assign(state, JSON.parse(localStorage.getItem(LS)||'{}')); } catch(e){}
 
-  var stream=null, raf=0, running=false, wakeLock=null, lastSnap=null;
+  var stream=null, raf=0, running=false, wakeLock=null;
+  var shotCount=0, actx=null, seq=0, curShot=null, galUrls=[];
 
   function save(){ try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){} }
   function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-    clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('show');},1600); }
+    clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('show');},1500); }
 
   function filterStr(){ return 'brightness('+state.bri+'%) contrast('+state.con+'%) saturate('+state.sat+'%)'; }
-  // live image adjustments: CSS filter on the canvas element (reliable in Safari)
   function applyAdjust(){ canvas.style.filter = filterStr(); }
 
-  // ---- render loop: video -> canvas (rotation / mirror only; colour is CSS) ----
+  // ===== store (IndexedDB, with in-memory fallback) =====
+  var useMem=false, mem=[];
+  function idb(){ return new Promise(function(res,rej){
+    var r=indexedDB.open('endoscope',1);
+    r.onupgradeneeded=function(){ r.result.createObjectStore('shots',{keyPath:'id'}); };
+    r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); };
+  }); }
+  function tx(mode,fn){ return idb().then(function(db){ return new Promise(function(res,rej){
+    var t=db.transaction('shots',mode), st=t.objectStore('shots'), out=fn(st);
+    t.oncomplete=function(){ res(out&&out.result!==undefined?out.result:undefined); };
+    t.onerror=function(){ rej(t.error); };
+  }); }); }
+  async function sPut(rec){ if(useMem){ mem.push(rec); return; } try{ await tx('readwrite',function(s){ s.put(rec); }); }catch(e){ useMem=true; mem.push(rec); } }
+  async function sAll(){ if(useMem) return mem.slice(); try{ return await tx('readonly',function(s){ return s.getAll(); }); }catch(e){ useMem=true; return mem.slice(); } }
+  async function sDel(id){ if(useMem){ mem=mem.filter(function(r){return r.id!==id;}); return; } try{ await tx('readwrite',function(s){ s.delete(id); }); }catch(e){ useMem=true; mem=mem.filter(function(r){return r.id!==id;}); } }
+  async function sClear(){ if(useMem){ mem=[]; return; } try{ await tx('readwrite',function(s){ s.clear(); }); }catch(e){ useMem=true; mem=[]; } }
+
+  function updateBadge(){ var b=document.getElementById('galBadge'); b.textContent=shotCount; b.classList.toggle('show', shotCount>0); }
+
+  // ===== render loop (rotation / mirror; colour via CSS filter) =====
   function draw(){
     raf = requestAnimationFrame(draw);
     if (video.readyState < 2 || !video.videoWidth) return;
@@ -174,27 +244,23 @@
     ctx.restore();
   }
 
-  // ---- camera ----
+  // ===== camera =====
   async function listCams(){
     var devs = await navigator.mediaDevices.enumerateDevices();
     var cams = devs.filter(function(d){ return d.kind==='videoinput'; });
     camSel.innerHTML='';
     cams.forEach(function(d,i){
-      var o=document.createElement('option');
-      o.value=d.deviceId;
-      o.textContent = d.label || ('Camera '+(i+1));
-      camSel.appendChild(o);
+      var o=document.createElement('option'); o.value=d.deviceId;
+      o.textContent = d.label || ('Camera '+(i+1)); camSel.appendChild(o);
     });
     return cams;
   }
-
   function pickDefault(cams){
     if (state.deviceId && cams.some(function(c){return c.deviceId===state.deviceId;})) return state.deviceId;
     var ext = cams.find(function(c){ return c.label && !BUILTIN.test(c.label); });
     if (ext) return ext.deviceId;
-    return cams.length ? cams[cams.length-1].deviceId : null;  // externals often enumerate last
+    return cams.length ? cams[cams.length-1].deviceId : null;
   }
-
   async function open(deviceId){
     if (stream) stream.getTracks().forEach(function(t){t.stop();});
     var constraints = { audio:false, video: deviceId
@@ -207,11 +273,11 @@
     if (tr && tr.getSettings){ var s=tr.getSettings(); if (s.deviceId) { state.deviceId=s.deviceId; save(); } }
     if (camSel.value !== state.deviceId) camSel.value = state.deviceId || '';
   }
-
   async function startFlow(){
     errEl.textContent='';
     try{
-      await open(state.deviceId);                 // first grant unlocks device labels
+      initAudio();
+      await open(state.deviceId);
       var cams = await listCams();
       var want = pickDefault(cams);
       if (want && want !== state.deviceId){ await open(want); }
@@ -221,11 +287,9 @@
       applyAdjust();
       cancelAnimationFrame(raf); draw();
       keepAwake();
-    }catch(e){
-      errEl.textContent = describeErr(e);
-    }
+      sAll().then(function(a){ shotCount=a.length; updateBadge(); });
+    }catch(e){ errEl.textContent = describeErr(e); }
   }
-
   function describeErr(e){
     if(!e) return 'Could not start the camera.';
     if(e.name==='NotAllowedError') return 'Camera permission was denied. Allow it in Settings and reload.';
@@ -234,77 +298,133 @@
     return (e.name||'Error')+': '+(e.message||'could not start camera');
   }
 
-  // ---- wake lock ----
-  async function keepAwake(){
-    try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){}
-  }
+  // ===== wake lock =====
+  async function keepAwake(){ try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){} }
   document.addEventListener('visibilitychange', function(){
     if(document.visibilityState==='visible' && running){
       keepAwake();
+      if(actx && actx.state==='suspended') actx.resume().catch(function(){});
       if(stream){ var tr=stream.getVideoTracks()[0];
         if(!tr || tr.readyState==='ended'){ open(state.deviceId).catch(function(){}); }
         video.play().catch(function(){}); }
     }
   });
 
-  // ---- snapshot (bakes the adjustments in via a pixel pass, so it works everywhere) ----
+  // ===== capture feedback =====
+  function initAudio(){ if(actx) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  function beep(){ if(!actx) return; try{
+    if(actx.state==='suspended') actx.resume();
+    var o=actx.createOscillator(), g=actx.createGain(); o.type='sine'; o.frequency.value=880;
+    o.connect(g); g.connect(actx.destination);
+    var t=actx.currentTime;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14);
+    o.start(t); o.stop(t+0.15);
+  }catch(e){} }
+  function flash(){ var f=document.getElementById('flash'); f.classList.add('go');
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ f.classList.remove('go'); }); }); }
+
+  function clampByte(v){ return v<0?0:v>255?255:v; }
   function stamp(){ var d=new Date(),p=function(n){return(n<10?'0':'')+n;};
     return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()); }
-  function clamp(v){ return v<0?0:v>255?255:v; }
 
+  // ===== snapshot: instant capture into the gallery (no dialog) =====
   function snapshot(){
-    if(!running || !canvas.width){ toast('No frame yet'); return; }
-    var ex = document.createElement('canvas');
-    ex.width = canvas.width; ex.height = canvas.height;
-    var ex2 = ex.getContext('2d');
-    ex2.drawImage(canvas, 0, 0);
+    if(!running || !canvas.width){ return; }
+    flash(); beep();
+    var ex = document.createElement('canvas'); ex.width=canvas.width; ex.height=canvas.height;
+    var ex2 = ex.getContext('2d'); ex2.drawImage(canvas,0,0);
     if(state.bri!==100 || state.con!==100 || state.sat!==100){
       try{
-        var img = ex2.getImageData(0,0,ex.width,ex.height), d=img.data;
+        var im=ex2.getImageData(0,0,ex.width,ex.height), d=im.data;
         var b=state.bri/100, c=state.con/100, s=state.sat/100;
         for(var i=0;i<d.length;i+=4){
           var r=d[i]*b, g=d[i+1]*b, bl=d[i+2]*b;
           r=(r-128)*c+128; g=(g-128)*c+128; bl=(bl-128)*c+128;
           var gray=0.299*r+0.587*g+0.114*bl;
-          d[i]=clamp(gray+(r-gray)*s); d[i+1]=clamp(gray+(g-gray)*s); d[i+2]=clamp(gray+(bl-gray)*s);
+          d[i]=clampByte(gray+(r-gray)*s); d[i+1]=clampByte(gray+(g-gray)*s); d[i+2]=clampByte(gray+(bl-gray)*s);
         }
-        ex2.putImageData(img,0,0);
+        ex2.putImageData(im,0,0);
       }catch(e){}
     }
-    lastSnap = ex.toDataURL('image/jpeg', 0.95);
-    document.getElementById('snapImg').src = lastSnap;
-    document.getElementById('snapOv').classList.add('open');
+    ex.toBlob(function(blob){
+      if(!blob){ toast('Capture failed'); return; }
+      var rec={ id: stamp()+'-'+(seq++), ts: Date.now(), blob: blob };
+      sPut(rec).then(function(){ shotCount++; updateBadge(); toast('Captured ('+shotCount+')'); })
+               .catch(function(){ toast('Could not store capture'); });
+    }, 'image/jpeg', 0.95);
   }
 
-  document.getElementById('snapClose').onclick=function(){
-    document.getElementById('snapOv').classList.remove('open');
-  };
-  document.getElementById('snapShare').onclick=async function(){
-    if(!lastSnap) return;
-    try{
-      var blob = await (await fetch(lastSnap)).blob();
-      var file = new File([blob], 'endoscope-'+stamp()+'.jpg', {type:'image/jpeg'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); }
-      else { toast('Long-press the image to save'); }
-    }catch(e){ if(e && e.name!=='AbortError') toast('Sharing not available — long-press to save'); }
-  };
+  // ===== gallery =====
+  function clearGalUrls(){ galUrls.forEach(function(u){ URL.revokeObjectURL(u); }); galUrls=[]; }
+  async function openGallery(){
+    var shots = await sAll(); shots.sort(function(a,b){ return b.ts-a.ts; });
+    var grid=document.getElementById('galGrid'); grid.innerHTML=''; clearGalUrls();
+    if(!shots.length){
+      var p=document.createElement('p'); p.className='galempty';
+      p.textContent='No captures yet. Tap Snapshot while you work — shots collect here, then save them to Photos when you can reach the iPad.';
+      grid.appendChild(p);
+    } else {
+      shots.forEach(function(sh){
+        var url=URL.createObjectURL(sh.blob); galUrls.push(url);
+        var btn=document.createElement('button'); btn.className='thumb';
+        var img=document.createElement('img'); img.src=url; img.loading='lazy'; btn.appendChild(img);
+        btn.onclick=function(){ openViewer(sh,url); };
+        grid.appendChild(btn);
+      });
+    }
+    shotCount=shots.length; updateBadge();
+    document.getElementById('gallery').classList.add('open');
+  }
+  function closeGallery(){ document.getElementById('gallery').classList.remove('open'); clearGalUrls(); }
 
-  // ---- controls ----
+  function openViewer(sh,url){ curShot=sh; document.getElementById('viewerImg').src=url; document.getElementById('viewer').classList.add('open'); }
+  function closeViewer(){ document.getElementById('viewer').classList.remove('open'); curShot=null; }
+
+  async function shareFiles(files){
+    if(navigator.canShare && navigator.canShare({files:files})){
+      try{ await navigator.share({files:files}); return true; }
+      catch(e){ if(e && e.name==='AbortError') return true; }
+    }
+    toast('Long-press an image to save it to Photos');
+    return false;
+  }
+
+  document.getElementById('galBtn').onclick = openGallery;
+  document.getElementById('galClose').onclick = closeGallery;
+  document.getElementById('vBack').onclick = closeViewer;
+
+  document.getElementById('vSave').onclick = async function(){
+    if(!curShot) return;
+    await shareFiles([ new File([curShot.blob], curShot.id+'.jpg', {type:'image/jpeg'}) ]);
+  };
+  document.getElementById('vDelete').onclick = async function(){
+    if(!curShot) return;
+    await sDel(curShot.id); closeViewer(); openGallery();
+  };
+  document.getElementById('saveAll').onclick = async function(){
+    var shots = await sAll();
+    if(!shots.length){ toast('Nothing to save'); return; }
+    shots.sort(function(a,b){ return a.ts-b.ts; });
+    var files = shots.map(function(sh){ return new File([sh.blob], sh.id+'.jpg', {type:'image/jpeg'}); });
+    await shareFiles(files);
+  };
+  document.getElementById('clearAll').onclick = async function(){
+    var shots = await sAll(); if(!shots.length){ return; }
+    if(clearAllArmed){ clearAllArmed=false; await sClear(); openGallery(); toast('Cleared'); return; }
+    clearAllArmed=true; var btn=document.getElementById('clearAll'); btn.textContent='Sure?';
+    setTimeout(function(){ clearAllArmed=false; btn.textContent='Clear'; }, 2500);
+  };
+  var clearAllArmed=false;
+
+  // ===== live controls =====
   document.getElementById('startBtn').onclick = startFlow;
-
-  camSel.onchange = function(){
-    state.deviceId = camSel.value; save();
-    open(state.deviceId).catch(function(e){ toast(describeErr(e)); });
-  };
-
+  camSel.onchange = function(){ state.deviceId = camSel.value; save(); open(state.deviceId).catch(function(e){ toast(describeErr(e)); }); };
   document.getElementById('rotBtn').onclick = function(){ state.rot = (state.rot + 90) % 360; save(); };
-
   var mirBtn=document.getElementById('mirBtn');
   function reflectMir(){ mirBtn.classList.toggle('on', state.mir); }
   mirBtn.onclick = function(){ state.mir = !state.mir; save(); reflectMir(); };
   reflectMir();
 
-  // adjust panel
   var adjust=document.getElementById('adjust'), adjBtn=document.getElementById('adjBtn');
   function bindSlider(id){
     var el=document.getElementById(id), lab=document.getElementById(id+'V');
@@ -312,29 +432,28 @@
     el.oninput=function(){ state[id]=+el.value; lab.textContent=el.value+'%'; applyAdjust(); save(); };
   }
   ['bri','con','sat'].forEach(bindSlider);
-  adjBtn.onclick=function(){ var open=adjust.classList.toggle('open'); adjBtn.classList.toggle('on',open); };
+  adjBtn.onclick=function(){ var o=adjust.classList.toggle('open'); adjBtn.classList.toggle('on',o); };
   document.getElementById('resetAdj').onclick=function(){
     state.bri=100;state.con=100;state.sat=100;save();applyAdjust();
     ['bri','con','sat'].forEach(function(id){ document.getElementById(id).value=100; document.getElementById(id+'V').textContent='100%'; });
   };
   document.getElementById('snapBtn').onclick = snapshot;
 
-  // Hardware shutter: the button on the scope's cable usually acts as a USB
-  // keyboard. During viewing there is no typing, so treat any hardware keypress
-  // as a shutter (debounced). Works only if iPadOS delivers it as a key event.
+  // Hardware shutter: a BT remote/footswitch (keyboard mode) sends a keypress.
+  // During viewing there's no typing, so any hardware key is treated as a shutter.
   var lastKeyShot = 0;
   window.addEventListener('keydown', function(e){
     if(!running) return;
-    if(document.getElementById('snapOv').classList.contains('open')) return;
+    if(document.getElementById('gallery').classList.contains('open') || document.getElementById('viewer').classList.contains('open')) return;
     var tag = (e.target && e.target.tagName || '').toLowerCase();
     if(tag==='input' || tag==='select' || tag==='textarea') return;
     if(e.key==='Shift' || e.key==='Control' || e.key==='Alt' || e.key==='Meta') return;
-    var now = Date.now(); if(now - lastKeyShot < 800) return; lastKeyShot = now;
-    e.preventDefault();
-    snapshot();
+    var now = Date.now(); if(now - lastKeyShot < 700) return; lastKeyShot = now;
+    e.preventDefault(); snapshot();
   });
 
   applyAdjust();
+  updateBadge();
 })();
 </script>
 </body>
